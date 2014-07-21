@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>net.arulraj.recorder</groupId>
+  <artifactId>simple-vrecorder-swf</artifactId>
+  <version>1.0</version>
+  <packaging>swf</packaging>
+
+  <name>simple-vrecorder-swf</name>
+  <description>Flex source code for video recorder</description>
+
+  <organization>
+    <name>arulraj.net</name>
+    <url>http://arulraj.net</url>
+  </organization>
+
+  <scm>
+    <url>https://github.com/arulrajnet/simplevideorecorder</url>
+    <connection>git@github.com:arulrajnet/simplevideorecorder.git</connection>
+  </scm>
+
+  <developers>
+    <developer>
+      <id>arul</id>
+      <name>Arulraj V</name>
+      <email>contact@arulraj.net</email>
+      <roles>
+        <role>Architect</role>
+      </roles>
+      <timezone>GMT + 530</timezone>
+    </developer>
+  </developers>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <flex.sdk.version>4.6.b.23201</flex.sdk.version>
+    <flexmojos.version>4.2-beta</flexmojos.version>
+    <cairngorm.version>2.2.1</cairngorm.version>
+    <flexunit.version>4.0-rc-1</flexunit.version>
+    <flashplayer.version.swf>13</flashplayer.version.swf>
+    <flashplayer.version.major>11</flashplayer.version.major>
+    <flashplayer.version.minor>1</flashplayer.version.minor>
+    <flashplayer.version.revision>1</flashplayer.version.revision>
+    <flashplayer.version>${flashplayer.version.major}.${flashplayer.version.minor}.${flashplayer.version.revision}</flashplayer.version>
+    <playerglobal.version>${flashplayer.version.major}.${flashplayer.version.minor}</playerglobal.version>
+    <flex.flashPlayer.command>${env.FLEX_HOME}/runtimes/player/11.1/win/FlashPlayerDebugger.exe</flex.flashPlayer.command>
+    <skipTests>false</skipTests>
+  </properties>
+
+  <build>
+    <finalName>video_recorder</finalName>
+    <sourceDirectory>src/main/flex</sourceDirectory>
+    <testSourceDirectory>src/test/flex</testSourceDirectory>
+    <plugins>
+      <plugin>
+        <groupId>org.sonatype.flexmojos</groupId>
+        <artifactId>flexmojos-maven-plugin</artifactId>
+        <version>${flexmojos.version}</version>
+        <extensions>true</extensions>
+        <configuration>
+          <swfVersion>${flashplayer.version.swf}</swfVersion>
+          <targetPlayer>${flashplayer.version}</targetPlayer>
+          <sourceFile>video_recorder.mxml</sourceFile>
+          <storepass/>
+          <debug>true</debug>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>com.adobe.flex</groupId>
+            <artifactId>compiler</artifactId>
+            <version>${flex.sdk.version}</version>
+            <type>pom</type>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>wrapper</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>wrapper</goal>
+            </goals>
+            <configuration>
+              <templateURI>folder:/src/main/resources/templates/swfobject</templateURI>
+              <!--<outputDirectory>${project.flex.htmlWrapperPath}</outputDirectory>-->
+              <wrapperArtifact>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>${project.artifactId}</artifactId>
+                <version>${project.version}</version>
+              </wrapperArtifact>
+              <htmlName>record</htmlName>
+              <parameters>
+                <expressInstallSwf>playerProductInstall.swf</expressInstallSwf>
+                <copyright.year>2013</copyright.year>
+                <copyright.client>arulraj.net</copyright.client>
+                <build.type>Developement</build.type>
+                <project.name>${project.artifactId}</project.name>
+                <project.version>${project.version}</project.version>
+              </parameters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+    <resources>
+      <resource>
+        <filtering>true</filtering>
+        <directory>src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>src/main/resources/templates/swfobject</directory>
+        <filtering>true</filtering>
+        <includes>
+          <include>*.html</include>
+          <!-- include any other file types you want to filter -->
+        </includes>
+      </resource>
+    </resources>
+  </build>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.adobe.flex.framework</groupId>
+      <artifactId>flex-framework</artifactId>
+      <version>${flex.sdk.version}</version>
+      <type>pom</type>
+      <exclusions>
+        <exclusion>
+          <groupId>com.adobe.flex.framework</groupId>
+          <artifactId>playerglobal</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>com.adobe.flex.framework</groupId>
+      <artifactId>playerglobal</artifactId>
+      <version>${flex.sdk.version}</version>
+      <classifier>${playerglobal.version}</classifier>
+      <type>swc</type>
+      <scope>external</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>pl.turbosqel</groupId>
+      <artifactId>as3supportlib</artifactId>
+      <version>1.0</version>
+      <type>swc</type>
+    </dependency>
+
+    <dependency>
+      <groupId>pl.turbosqel</groupId>
+      <artifactId>asml</artifactId>
+      <version>1.0</version>
+      <type>swc</type>
+    </dependency>
+
+    <dependency>
+      <groupId>com.adobe.flexunit</groupId>
+      <artifactId>flexunit</artifactId>
+      <version>${flexunit.version}</version>
+      <type>swc</type>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.greensock</groupId>
+      <artifactId>tweenlite</artifactId>
+      <version>11.698</version>
+      <type>swc</type>
+    </dependency>
+
+  </dependencies>
+
+  <!-- Repository and PluginRepository section for Flex SDK and compiler dependencies. 
+       Note: instead of including this in every POM, you can append it to your user (~/.m2/settings.xml) or global 
+  		(M2_HOME/conf/settings.xml) settings file. 
+    -->
+  <repositories>
+    <repository>
+      <id>flex-mojos-repository</id>
+      <url>http://repository.sonatype.org/content/groups/flexgroup</url>
+    </repository>
+    <repository>
+      <id>Flexis maven repository-releases</id>
+      <name>Flexis maven repository-releases</name>
+      <url>http://artifactory.flexis.ru:8030/artifactory/flexis-local</url>
+    </repository>
+  </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>flex-mojos-plugin-repository</id>
+      <url>http://repository.sonatype.org/content/groups/flexgroup</url>
+    </pluginRepository>
+  </pluginRepositories>
+
+  <profiles>
+    <profile>
+      <id>local</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+    </profile>
+  </profiles>
+</project>

@@ -1,0 +1,327 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx"
+               preinitialize="preinitializeHandler(event)"
+               creationComplete="onCreationComplete(event)"
+               backgroundColor="black"
+               minWidth="320" minHeight="240">
+
+  <fx:Declarations>
+    <!-- Place non-visual elements (e.g., services, value objects) here -->
+    <s:Parallel id="showEffect">
+      <s:Fade id="fadeIn" alphaFrom="0.0" alphaTo="1.0" />
+    </s:Parallel>
+    <s:Parallel id="hideEffect">
+      <s:Fade id="fadeOut" alphaFrom="1.0" alphaTo="0.0" />
+    </s:Parallel>
+  </fx:Declarations>
+
+  <s:layout>
+    <s:VerticalLayout />
+  </s:layout>
+
+  <fx:Script><![CDATA[
+    import mx.core.FlexGlobals;
+    import mx.events.FlexEvent;
+    import mx.logging.ILogger;
+    import mx.logging.Log;
+    import mx.logging.LogEventLevel;
+    import mx.logging.targets.TraceTarget;
+    import mx.managers.PopUpManager;
+
+    import net.arulraj.recorder.component.AssetClass;
+
+    import net.arulraj.recorder.component.InfoPopup;
+
+    import net.arulraj.recorder.helper.MediaHelper;
+    import net.arulraj.recorder.helper.ServerHelper;
+    import net.arulraj.recorder.model.AudioOptions;
+    import net.arulraj.recorder.model.CamcorderEvent;
+    import net.arulraj.recorder.model.ConnectionModel;
+    import net.arulraj.recorder.model.ServerConf;
+    import net.arulraj.recorder.model.VideoOptions;
+    import net.arulraj.recorder.utils.CommonUtils;
+
+    private static const MAX_RECORD_TIME:int = 120;
+
+    [Bindable]
+    private var mHelper:MediaHelper = MediaHelper.instance;
+
+    [Bindable]
+    private var sHelper:ServerHelper = ServerHelper.instance;
+
+    [Bindable]
+    private var videoOption:VideoOptions = mHelper.videoOption;
+
+    [Bindable]
+    private var audioOption:AudioOptions = mHelper.audioOption;
+
+    [Bindable]
+    private var sec:int = 0;
+
+    [Bindable]
+    private var min:int = 0;
+
+    [Bindable]
+    private var mls:int = 0;
+
+    private var timerAtStart:int = 0;
+
+    private var d:Date;
+
+    private var maxBufferLength:int;
+
+    private var publishStreamName:String;
+
+    private var uploadingPopup:InfoPopup;
+
+    public var commonTimer:Timer = new Timer(100);
+
+    private var LOG:ILogger = Log.getLogger("Main.mxml");
+
+    private function preinitializeHandler(event:FlexEvent):void {
+      initLogging();
+    }
+
+    private function onCreationComplete(event:FlexEvent):void {
+      LOG.debug("onCreationComplete ...");
+      commonTimer.start();
+      connectToServer();
+    }
+
+    /**
+     * Get the config from xml file from server
+     */
+    /*    private function initConfig():void {
+     LOG.debug("### initConfig : Start");
+     configResource = ResourceManage.setExternal("globals.xml");
+     LOG.debug("" + ResourceManage.exist("globals.xml"));
+     DownloadManager.addEventListener(DownloadManagerEvent.COMPLETE, onDonwloadCompleteConfig);
+     LOG.debug("### initConfig : End");
+     }
+
+     private function onDonwloadCompleteConfig(event:DownloadManagerEvent):void {
+     LOG.debug("### initUIDesign : Start");
+     var globalsXml:XML = new XML(configResource.loaderInfo.source);
+     var xmlResult:Array = ASMLManager.parseXML(globalsXml, this);
+     LOG.debug("### initUIDesign : End");
+     }*/
+
+    private function connectToServer(event:MouseEvent = null):void {
+      if (!sHelper.isRed5Inited()) {
+        sHelper.initRed5Connection(false);
+        sHelper.getRed5Proxy().addEventListener(CamcorderEvent.EVENT_CONNECTED, onToggleConnectedToServer);
+        sHelper.getRed5Proxy().addEventListener(CamcorderEvent.EVENT_DISCONNECTED, onToggleConnectedToServer);
+      } else {
+        var connectionModel:ConnectionModel = ConnectionModel.instance;
+        if (connectionModel.netConnection.connected) {
+          sHelper.shutdown();
+        } else {
+          sHelper.refreshConnection();
+          sHelper.getRed5Proxy().addEventListener(CamcorderEvent.EVENT_CONNECTED, onToggleConnectedToServer);
+          sHelper.getRed5Proxy().addEventListener(CamcorderEvent.EVENT_DISCONNECTED, onToggleConnectedToServer);
+        }
+      }
+    }
+
+    private function onToggleConnectedToServer(event:Event = null):void {
+      updateRecordInfo(event != null ? event.type : null);
+      if (event.type == CamcorderEvent.EVENT_CONNECTED) {
+        LOG.debug("Inialize the camera once connected...");
+        mHelper.addEventListener(MediaHelper.EVENT_CAMERA_STARTED, onCameraInialized);
+        mHelper.startup();
+        commonTimer.addEventListener(TimerEvent.TIMER, updateMicMeter);
+        recordButton.enabled = true;
+      } else if (event.type == CamcorderEvent.EVENT_DISCONNECTED) {
+        recordButton.enabled = false;
+        onToggleRecordHandler(new Event(CamcorderEvent.EVENT_DISCONNECTED))
+      }
+    }
+
+    private function onCameraInialized(event:Event = null):void {
+      var previewVideo:Video = new Video(liveVideoDisplay.width, liveVideoDisplay.height);
+      previewVideo.smoothing = true;
+      previewVideo.attachCamera(mHelper.camera);
+      liveVideoDisplay.addChild(previewVideo);
+    }
+
+    private function onToggleRecordHandler(event:Event):void {
+      updateRecordInfo(event != null ? event.type : null);
+      if (event.type == CamcorderEvent.EVENT_PUBLISH_STARTED) {
+        timerAtStart = getTimer();
+        commonTimer.addEventListener(TimerEvent.TIMER, updateRecordTimer);
+        recordInfoLabel.text = "Recording...";
+        recordButton.label = "Stop Record";
+        videoOption.isBroadcasting = true;
+        audioOption.isBroadcasting = true;
+        sHelper.removeEventListener(CamcorderEvent.EVENT_PUBLISH_STARTED, onToggleRecordHandler);
+
+      } else if (event.type == (CamcorderEvent.EVENT_PUBLISH_STOPPED || CamcorderEvent.EVENT_DISCONNECTED)) {
+        recordButton.label = "Start Record";
+        videoOption.isBroadcasting = false;
+        audioOption.isBroadcasting = false;
+        sHelper.removeEventListener(CamcorderEvent.EVENT_PUBLISH_STOPPED, onToggleRecordHandler);
+        /**
+         * Notify php about record finsh with filename
+         */
+        if (event.type == CamcorderEvent.EVENT_PUBLISH_STOPPED) {
+        }
+      }
+    }
+
+    private function onPauseRecord(event:FlexEvent):void {
+
+    }
+
+    private function onStartRecord(event:MouseEvent = null):void {
+      sHelper.addEventListener(CamcorderEvent.EVENT_PUBLISH_STARTED, onToggleRecordHandler);
+      ServerConf.RECORDED_FILE_PREFIX = "int";
+      publishStreamName = ServerConf.streamName;
+      sHelper.initRed5Publish(publishStreamName);
+
+      /**
+       * Send Camera and Mic depends upon the selection
+       */
+      if (videoOption.enableVideo && sHelper.getRed5Proxy().getOutgoingStream() != null) {
+        sHelper.getOutgoingStream().attachCamera(mHelper.camera);
+      }
+
+      if (audioOption.enableAudio && sHelper.getRed5Proxy().getOutgoingStream() != null) {
+        sHelper.getOutgoingStream().attachAudio(mHelper.microphone);
+      }
+    }
+
+    private function onStopRecord(event:MouseEvent = null):void {
+      if (sHelper.getOutgoingStream() != null) {
+        maxBufferLength = sHelper.getOutgoingStream().bufferLength;
+        sHelper.getOutgoingStream().attachAudio(null);
+        sHelper.getOutgoingStream().attachCamera(null);
+        sHelper.addEventListener(CamcorderEvent.EVENT_PUBLISH_STOPPED, onToggleRecordHandler);
+        commonTimer.removeEventListener(TimerEvent.TIMER, updateRecordTimer);
+        commonTimer.addEventListener(TimerEvent.TIMER, handleBufferCheck);
+        recordButton.enabled = false;
+        showUploadingPopup();
+      }
+    }
+
+    private function showUploadingPopup(event:Event = null):void {
+      uploadingPopup = InfoPopup(PopUpManager.createPopUp(FlexGlobals.topLevelApplication as Application, InfoPopup, true));
+      uploadingPopup.title = "Please wait";
+      uploadingPopup.infoLabel.text = "00%";
+      uploadingPopup.exitEnabled = false;
+      uploadingPopup.width = this.width - 20;
+      uploadingPopup.height = this.height - 20;
+      uploadingPopup.changePopupImage(AssetClass.QUS_REC_WAITING_MSG);
+      PopUpManager.centerPopUp(uploadingPopup);
+    }
+
+    private function hideUploadingPopup():void {
+      PopUpManager.removePopUp(uploadingPopup);
+    }
+
+    private function handleBufferCheck(e:TimerEvent):void {
+      LOG.debug("handleBufferCheck : " + sHelper.getOutgoingStream().bufferLength + " maxBufferLength : " + maxBufferLength);
+      if (sHelper.getOutgoingStream().bufferLength == 0) {
+        uploadingPopup.infoLabel.text = recordInfoLabel.text = "Saving...";
+        sHelper.getOutgoingStream().close();
+        durationLabel.text = "00:00/" + CommonUtils.numberToTimeString(MAX_RECORD_TIME);
+        recordButton.enabled = true;
+        commonTimer.removeEventListener(TimerEvent.TIMER, handleBufferCheck);
+        hideUploadingPopup();
+        recordButton.label = "Start Record";
+        uploadingPopup.infoLabel.text = recordInfoLabel.text = "";
+      } else {
+        var uploadPercent:int = ( (maxBufferLength - sHelper.getOutgoingStream().bufferLength) / maxBufferLength) * 100;
+        recordInfoLabel.text = "Uploading " + CommonUtils.zeroPad(uploadPercent, 2) + "%...";
+        uploadingPopup.infoLabel.text = CommonUtils.zeroPad(uploadPercent, 2) + "%";
+      }
+    }
+
+    private function updateRecordTimer(evt:TimerEvent):void {
+      d = new Date(getTimer() - timerAtStart);
+      min = d.minutesUTC;
+      sec = d.secondsUTC;
+      mls = d.millisecondsUTC;
+      if (durationLabel != null) {
+        durationLabel.text = CommonUtils.zeroPad(min, 2) + ":" + CommonUtils.zeroPad(sec, 2) + "/" + CommonUtils.numberToTimeString(MAX_RECORD_TIME);
+      }
+      if (min == (MAX_RECORD_TIME / 60)) {
+        //TODO
+        onStopRecord();
+      }
+    }
+
+    private function updateMicMeter(event:TimerEvent = null):void {
+      if (MediaHelper.instance.microphone != null) {
+        var activityLevel:int = MediaHelper.instance.microphone.activityLevel;
+        micProgress.setProgress(activityLevel, 100);
+      }
+    }
+
+    private function updateRecordInfo(eventType:String):void {
+      if (eventType == CamcorderEvent.EVENT_PUBLISH_STARTED) {
+        recordInfoLabel.text = "Recording...";
+      } else if (eventType == CamcorderEvent.EVENT_PUBLISH_STOPPED) {
+        recordInfoLabel.text = "";
+      } else if (eventType == CamcorderEvent.EVENT_CONNECTED) {
+        recordInfoLabel.text = "";
+      } else if (eventType == CamcorderEvent.EVENT_DISCONNECTED) {
+        recordInfoLabel.text = "Failed to connect server...";
+      }
+    }
+
+    private function initVars():void {
+      var flashvars:Object = this.parameters;
+      if (flashvars != null) {
+      }
+    }
+
+    private function initLogging():void {
+      // Create a target.
+      var logTarget:TraceTarget = new TraceTarget();
+
+      // Log only messages for the following packages
+      logTarget.filters = ["*", "net.arulraj.recorder.*", "net.arulraj.recorder.net.*", "net.arulraj.recorder.helper.*",
+        "net.arulraj.recorder.tabs.*", "net.arulraj.recorder.service.*", "net.arulraj.recorder.model.*"];
+
+      // Log all log levels.
+      logTarget.level = LogEventLevel.ALL;
+
+      // Add date, time, category, and log level to the output.
+      logTarget.includeDate = true;
+      logTarget.includeTime = true;
+      logTarget.includeCategory = true;
+      logTarget.includeLevel = true;
+
+      // Begin logging.
+      Log.addTarget(logTarget);
+    }
+
+    /**
+     * Public
+     */
+    public function refreshCamera():void {
+      liveVideoDisplay.removeChildAt(0);
+      onCameraInialized();
+    }
+    ]]></fx:Script>
+
+  <s:SkinnableContainer id="liveVideoBox"
+                        width="{this.width}" height="{this.height}">
+    <s:VideoDisplay x="0" y="0" id="liveVideoDisplay" name="liveVideoDisplay" width="{liveVideoBox.width}" height="{liveVideoBox.height}" />
+
+    <s:Label x="5" y="3" id="recordInfoLabel" fontWeight="bold" color="red" text="Connecting..." />
+
+    <s:Label x="{liveVideoBox.width - durationLabel.width}" y="3" id="durationLabel" fontWeight="bold" color="red" text="00:00/{CommonUtils.numberToTimeString(MAX_RECORD_TIME)}" />
+
+    <s:Button x="{liveVideoBox.width/2 - recordButton.width/2}" y="{liveVideoBox.height - (micProgress.height + recordButton.height)}" id="recordButton" label="Start Record" visible="true"
+              enabled="false" click="videoOption.isBroadcasting ? onStopRecord(event) : onStartRecord(event)" />
+
+    <mx:ProgressBar x="0" y="{liveVideoBox.height - micProgress.height}" minimum="0" maximum="100" width="{liveVideoBox.width}" height="20"
+                    label="Mic Volume {micProgress.value > 0 ? CommonUtils.zeroPad(micProgress.value, 2) : '00'} %" labelPlacement="center"
+                    id="micProgress" mode="manual" visible="true" alpha="0.6" />
+  </s:SkinnableContainer>
+
+</s:Application>

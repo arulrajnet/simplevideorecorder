@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<s:ASML	xmlns:s="script" 
+		xmlns:c="constructor" 
+		xmlns:set="setter" 
+		xmlns:get="getter" 
+		xmlns:v="var" 
+		xmlns:f="call" 
+		xmlns:m="math"
+		xmlns:l="local">
+
+	<set:RED5_APP static="net.arulraj.recorder.model.ServerConf">
+		<v:String>VideoRecorder</v:String>
+	</set:RED5_APP>
+	
+	<set:RED5_SERVER static="net.arulraj.recorder.model.ServerConf">
+		<v:String>server.v-report.co.za</v:String>
+	</set:RED5_SERVER>
+
+</s:ASML>

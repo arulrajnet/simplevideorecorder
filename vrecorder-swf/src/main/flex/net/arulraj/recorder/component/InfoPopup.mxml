@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+	File	: InfoPopup.mxml
+	Date	: June 30, 2014
+	Owner	: arul
+	Project	: vreport
+	Contact	: http://www.arulraj.net
+	Description :
+	History	:
+-->
+
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark"
+			   title="Message" name="infoPopup" skinClass="net.arulraj.recorder.skin.PopupSkin"
+			   width="300" height="{_exitEnabled ? 100 : 100}" cornerRadius="7" dropShadowVisible="false"
+			   close="{_exitEnabled ? close() : null}"> 
+	<fx:Script>
+		<![CDATA[
+      import mx.managers.PopUpManager;
+
+      [Bindable]
+      private var _exitEnabled:Boolean = false;
+
+      public function close():void {
+        PopUpManager.removePopUp(this);
+      }
+
+      public function changePopupImage(imgClass:Class):void {
+      }
+
+      public function set exitEnabled(exitEnabled:Boolean):void {
+        this._exitEnabled = exitEnabled;
+        this.closeButton.visible = false;
+      }
+
+      public function get exitEnabled():Boolean {
+        return this._exitEnabled;
+      }
+      ]]>
+	</fx:Script>
+	<s:VGroup horizontalCenter="0" verticalCenter="0">
+		<s:Label id="infoLabel" x="{(this.width+infoLabel.width) / 2}" y="{(this.height+infoLabel.height) / 2}"
+                 textAlign="center" verticalAlign="middle" fontSize="24" fontWeight="bold" color="red" text="" />
+
+		<s:Button id="closeButton" label="Close" horizontalCenter="0" visible="false" includeInLayout="{this.closeButton.visible}" click="close()" />
+	</s:VGroup>
+	
+</s:TitleWindow>
