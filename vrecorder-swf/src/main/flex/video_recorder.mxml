@@ -213,7 +213,6 @@
       uploadingPopup.exitEnabled = false;
       uploadingPopup.width = this.width - 20;
       uploadingPopup.height = this.height - 20;
-      uploadingPopup.changePopupImage(AssetClass.QUS_REC_WAITING_MSG);
       PopUpManager.centerPopUp(uploadingPopup);
     }
 

@@ -267,8 +267,6 @@ public class MediaHelper extends  EventDispatcher {
 
         if(ComponentHelper.instance.main) {
           ComponentHelper.instance.main.refreshCamera();
-        } else if(ComponentHelper.instance.preview) {
-          ComponentHelper.instance.preview.refreshCamera();
         }
     }
 

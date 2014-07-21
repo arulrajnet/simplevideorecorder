@@ -6,8 +6,8 @@ import mx.utils.StringUtil;
 
 public class ServerConf {
 
-  public static const RED5_SERVER:String="server.v-report.co.za";
-  public static const RED5_APP:String = "VideoRecorder";
+  public static const RED5_SERVER:String="recorder.example.com";
+  public static const RED5_APP:String = "vod";
 
   private static const RTMP_PORT:int=1935;
   private static const HTTP_PORT:int=5080;
