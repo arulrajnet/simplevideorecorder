@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration>
+
+    <contextName>VideoRecorder</contextName>
+
+    <jmxConfigurator contextName="VideoRecorder" />
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <!--Encoder tag is not working in older version of logback-->
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <pattern>%p [%t] %c{1}.%M\(%L\) | %m%n</pattern>
+        </layout>
+    </appender>
+
+    <!-- This appender to catch all except trace -->
+    <appender name="DEBUG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>log/VideoRecorder_debug.log</file>
+        <append>true</append>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>log/VideoRecorder_debug.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
+        </rollingPolicy>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>DEBUG</level>
+        </filter>
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <pattern>%d{ISO8601} %-5p [%c{3}] \(%t:%X{}\) %m%n</pattern>
+        </layout>
+    </appender>
+
+    <!-- This appender to catch only errors -->
+    <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>log/VideoRecorder_error.log</file>
+        <append>true</append>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>log/VideoRecorder_error.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
+        </rollingPolicy>
+
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <pattern>%d{ISO8601} %-5p [%c{3}] \(%t:%X{}\) %m%n</pattern>
+        </layout>
+    </appender>
+
+    <root>
+        <level value="DEBUG"/>
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="DEBUG_FILE"/>
+        <appender-ref ref="ERROR_FILE"/>
+    </root>
+
+    <logger name="com.org.makeeit.vrecorder">
+        <level value="DEBUG"/>
+    </logger>
+
+    <!-- Third Parties Logs -->
+    <logger name="org.springframework">
+        <level value="WARN"/>
+    </logger>
+
+</configuration>
